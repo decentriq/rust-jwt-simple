@@ -1,14 +1,21 @@
 use std::collections::HashSet;
 use std::convert::TryInto;
 
-use coarsetime::{Clock, Duration, UnixTimeStamp};
+#[cfg(feature = "coarsetime")]
+use coarsetime::{Clock, Duration};
+
+#[cfg(feature = "chrono")]
+use chrono::Duration;
+
 use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
 use rand::RngCore;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use crate::common::FromSecs;
 use crate::common::VerificationOptions;
 use crate::error::*;
 use crate::serde_additions;
+use crate::serde_additions::unix_timestamp::UnixTimeStamp;
 
 pub const DEFAULT_TIME_TOLERANCE_SECS: u64 = 900;
 
@@ -172,9 +179,14 @@ pub struct JWTClaims<CustomClaims> {
 }
 
 impl<CustomClaims> JWTClaims<CustomClaims> {
+    #[cfg(feature = "clock")]
     pub(crate) fn validate(&self, options: &VerificationOptions) -> Result<(), Error> {
         let now = Clock::now_since_epoch();
-        let time_tolerance = options.time_tolerance.unwrap_or_default();
+        self.validate_with_duration(now, options)
+    }
+
+    pub(crate) fn validate_with_duration(&self, now: UnixTimeStamp, options: &VerificationOptions) -> Result<(), Error> {
+        let time_tolerance = options.time_tolerance.unwrap_or(Duration::from_secs(0));
 
         if let Some(reject_before) = options.reject_before {
             ensure!(now <= reject_before, JWTError::OldTokenReused);
@@ -298,14 +310,19 @@ impl<CustomClaims> JWTClaims<CustomClaims> {
 pub struct Claims;
 
 impl Claims {
+    #[cfg(feature = "clock")]
     /// Create a new set of claims, without custom data, expiring in
     /// `valid_for`.
     pub fn create(valid_for: Duration) -> JWTClaims<NoCustomClaims> {
-        let now = Some(Clock::now_since_epoch());
+        let now = Clock::now_since_epoch();
+        Self::create_with_timestamp(now, valid_for)
+    }
+
+    pub fn create_with_timestamp(now: UnixTimeStamp, valid_for: Duration) -> JWTClaims<NoCustomClaims> {
         JWTClaims {
-            issued_at: now,
-            expires_at: Some(now.unwrap() + valid_for),
-            invalid_before: now,
+            issued_at: Some(now),
+            expires_at: Some(now + valid_for),
+            invalid_before: Some(now),
             audiences: None,
             issuer: None,
             jwt_id: None,
@@ -315,6 +332,7 @@ impl Claims {
         }
     }
 
+    #[cfg(feature = "clock")]
     /// Create a new set of claims, with custom data, expiring in `valid_for`.
     pub fn with_custom_claims<CustomClaims: Serialize + DeserializeOwned>(
         custom_claims: CustomClaims,

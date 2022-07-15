@@ -1,9 +1,30 @@
 use std::collections::HashSet;
 
-use coarsetime::{Duration, UnixTimeStamp};
+#[cfg(feature = "coarsetime")]
+use coarsetime::Duration;
+
+#[cfg(feature = "chrono")]
+use chrono::Duration;
+
+pub(crate) trait FromSecs {
+    fn from_secs(secs: u64) -> Self;
+}
+
+pub(crate) trait AsSecs {
+    fn as_secs(&self) -> u64;
+}
+
+#[cfg(feature = "chrono")]
+impl FromSecs for chrono::Duration {
+    fn from_secs(secs: u64) -> Self {
+        chrono::Duration::seconds(secs as _)
+    }
+}
+
 use ct_codecs::{Base64UrlSafeNoPadding, Decoder, Encoder, Hex};
 
 use crate::{claims::DEFAULT_TIME_TOLERANCE_SECS, error::*};
+use crate::serde_additions::unix_timestamp::UnixTimeStamp;
 
 pub const DEFAULT_MAX_TOKEN_LENGTH: usize = 1_000_000;
 

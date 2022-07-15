@@ -1,7 +1,29 @@
 pub mod unix_timestamp {
     use std::fmt;
 
-    use coarsetime::UnixTimeStamp;
+    use crate::common::AsSecs;
+    use crate::common::FromSecs;
+
+    #[cfg(feature = "coarsetime")]
+    pub type UnixTimeStamp = coarsetime::UnixTimeStamp;
+
+    #[cfg(feature = "chrono")]
+    pub type UnixTimeStamp = chrono::NaiveDateTime;
+
+    #[cfg(feature = "chrono")]
+    impl AsSecs for chrono::NaiveDateTime {
+        fn as_secs(&self) -> u64 {
+            self.timestamp() as _
+        }
+    }
+    #[cfg(feature = "chrono")]
+    impl FromSecs for chrono::NaiveDateTime {
+        fn from_secs(secs: u64) -> Self {
+            chrono::NaiveDateTime::from_timestamp(secs as _, 0)
+        }
+    }
+    
+    
     use serde::{
         de::{Error as DeError, Visitor},
         Deserializer, Serializer,

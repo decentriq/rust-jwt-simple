@@ -308,7 +308,9 @@ mod serde_additions;
 
 pub mod reexports {
     pub use anyhow;
+    #[cfg(feature = "coarsetime")]
     pub use coarsetime;
+    #[cfg(feature = "chrono")]
     pub use ct_codecs;
     pub use rand;
     pub use serde;
@@ -323,7 +325,11 @@ pub use error::{Error, JWTError};
 pub mod prelude {
     pub use std::collections::HashSet;
 
-    pub use coarsetime::{self, Clock, Duration, UnixTimeStamp};
+    #[cfg(feature = "coarsetime")]
+    pub use coarsetime::{self, Clock, Duration};
+
+    pub use crate::serde_additions::unix_timestamp::UnixTimeStamp;
+
     pub use ct_codecs::{
         Base64, Base64NoPadding, Base64UrlSafe, Base64UrlSafeNoPadding, Decoder as _, Encoder as _,
     };
