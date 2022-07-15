@@ -25,7 +25,7 @@ hmac-sha512 = { version = "1.1.2", features = ["traits010", "sha384"] }
 k256 = { version = "^0.10.0", features = ["ecdsa", "std", "pkcs8", "pem"] }
 p256 = { version = "^0.10.0", features = ["ecdsa", "std", "pkcs8", "pem"] }
 rand = "0.8.4"
-rsa = "0.6.1"
+rsa = "^0.5.0"
 serde = { version = "1.0.63", features = ["derive"] }
 serde_json = "^1.0.40"
 spki05 = { package = "spki", version = "0.5.4" }                           # Use an old version, required by the rsa crate, but that crate doesn't reexport it
