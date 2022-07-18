@@ -327,6 +327,9 @@ pub mod prelude {
 
     #[cfg(feature = "coarsetime")]
     pub use coarsetime::{self, Clock, Duration};
+    
+    #[cfg(feature = "chrono")]
+    pub use chrono::Duration;
 
     pub use crate::serde_additions::unix_timestamp::UnixTimeStamp;
 
