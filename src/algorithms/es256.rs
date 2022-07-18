@@ -183,7 +183,6 @@ pub trait ECDSAP256PublicKeyLike {
     fn key_id(&self) -> &Option<String>;
     fn set_key_id(&mut self, key_id: String);
 
-    #[cfg(feature = "clock")]
     fn verify_token<CustomClaims: Serialize + DeserializeOwned>(
         &self,
         token: &str,
@@ -204,32 +203,6 @@ pub trait ECDSAP256PublicKeyLike {
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
-        )
-    }
-
-    #[cfg(feature = "chrono")]
-    fn verify_token_with_timestamp<CustomClaims: Serialize + DeserializeOwned>(
-        &self,
-        token: &str,
-        options: Option<VerificationOptions>,
-        now: chrono::NaiveDateTime
-    ) -> Result<JWTClaims<CustomClaims>, Error> {
-        Token::verify(
-            Self::jwt_alg_name(),
-            token,
-            options,
-            |authenticated, signature| {
-                let ecdsa_signature = ecdsa::Signature::try_from(signature)
-                    .map_err(|_| JWTError::InvalidSignature)?;
-                let mut digest = hmac_sha256::Hash::new();
-                digest.update(authenticated.as_bytes());
-                self.public_key()
-                    .as_ref()
-                    .verify_digest(digest, &ecdsa_signature)
-                    .map_err(|_| JWTError::InvalidSignature)?;
-                Ok(())
-            },
-            now,
         )
     }
 

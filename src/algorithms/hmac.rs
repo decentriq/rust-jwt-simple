@@ -73,7 +73,6 @@ pub trait MACLike {
         })
     }
 
-    #[cfg(feature = "clock")]
     fn verify_token<CustomClaims: Serialize + DeserializeOwned>(
         &self,
         token: &str,
@@ -90,28 +89,6 @@ pub trait MACLike {
                 );
                 Ok(())
             },
-        )
-    }
-
-    #[cfg(feature = "chrono")]
-    fn verify_token_with_timestamp<CustomClaims: Serialize + DeserializeOwned>(
-        &self,
-        token: &str,
-        options: Option<VerificationOptions>,
-        now: chrono::NaiveDateTime
-    ) -> Result<JWTClaims<CustomClaims>, Error> {
-        Token::verify(
-            Self::jwt_alg_name(),
-            token,
-            options,
-            |authenticated, authentication_tag| {
-                ensure!(
-                    timingsafe_eq(&self.authentication_tag(authenticated), authentication_tag),
-                    JWTError::InvalidAuthenticationTag
-                );
-                Ok(())
-            },
-            now,
         )
     }
 

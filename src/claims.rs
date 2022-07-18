@@ -179,38 +179,12 @@ pub struct JWTClaims<CustomClaims> {
 }
 
 impl<CustomClaims> JWTClaims<CustomClaims> {
-    #[cfg(feature = "clock")]
+
     pub(crate) fn validate(&self, options: &VerificationOptions) -> Result<(), Error> {
+        #[cfg(feature = "clock")]
         let now = Clock::now_since_epoch();
-        self.validate_with_duration(now, options)
-    }
-
-    pub(crate) fn validate_with_duration(&self, now: UnixTimeStamp, options: &VerificationOptions) -> Result<(), Error> {
-        let time_tolerance = options.time_tolerance.unwrap_or(Duration::from_secs(0));
-
-        if let Some(reject_before) = options.reject_before {
-            ensure!(now <= reject_before, JWTError::OldTokenReused);
-        }
-        if let Some(time_issued) = self.issued_at {
-            ensure!(time_issued <= now + time_tolerance, JWTError::ClockDrift);
-            if let Some(max_validity) = options.max_validity {
-                ensure!(
-                    now <= time_issued || now - time_issued <= max_validity,
-                    JWTError::TokenIsTooOld
-                );
-            }
-        }
-        if !options.accept_future {
-            if let Some(invalid_before) = self.invalid_before {
-                ensure!(now >= invalid_before, JWTError::TokenNotValidYet);
-            }
-        }
-        if let Some(expires_at) = self.expires_at {
-            ensure!(
-                now - time_tolerance <= expires_at,
-                JWTError::TokenHasExpired
-            );
-        }
+        #[cfg(feature = "clock")]
+        self.check_time_requirements(now, options);
         if let Some(allowed_issuers) = &options.allowed_issuers {
             if let Some(issuer) = &self.issuer {
                 ensure!(
@@ -247,6 +221,34 @@ impl<CustomClaims> JWTClaims<CustomClaims> {
             } else {
                 bail!(JWTError::RequiredAudienceMissing);
             }
+        }
+        Ok(())
+    }
+
+    fn check_time_requirements(&self, now: UnixTimeStamp, options: &VerificationOptions) -> Result<(), Error> {
+        let time_tolerance = options.time_tolerance.unwrap_or(Duration::from_secs(0));
+        if let Some(reject_before) = options.reject_before {
+            ensure!(now <= reject_before, JWTError::OldTokenReused);
+        }
+        if let Some(time_issued) = self.issued_at {
+            ensure!(time_issued <= now + time_tolerance, JWTError::ClockDrift);
+            if let Some(max_validity) = options.max_validity {
+                ensure!(
+                    now <= time_issued || now - time_issued <= max_validity,
+                    JWTError::TokenIsTooOld
+                );
+            }
+        }
+        if !options.accept_future {
+            if let Some(invalid_before) = self.invalid_before {
+                ensure!(now >= invalid_before, JWTError::TokenNotValidYet);
+            }
+        }
+        if let Some(expires_at) = self.expires_at {
+            ensure!(
+                now - time_tolerance <= expires_at,
+                JWTError::TokenHasExpired
+            );
         }
         Ok(())
     }
