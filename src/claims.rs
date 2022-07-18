@@ -357,6 +357,7 @@ impl Claims {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "clock")]
     #[test]
     fn should_set_standard_claims() {
         let exp = Duration::from_mins(10);

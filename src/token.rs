@@ -124,6 +124,8 @@ impl Token {
         token: &str,
         options: Option<VerificationOptions>,
         authentication_or_signature_fn: AuthenticationOrSignatureFn,
+        #[cfg(feature = "chrono")]
+        now: chrono::NaiveDateTime,
     ) -> Result<JWTClaims<CustomClaims>, Error>
     where
         AuthenticationOrSignatureFn: FnOnce(&str, &[u8]) -> Result<(), Error>,
@@ -170,6 +172,9 @@ impl Token {
         authentication_or_signature_fn(authenticated, &authentication_tag)?;
         let claims: JWTClaims<CustomClaims> =
             serde_json::from_slice(&Base64UrlSafeNoPadding::decode_to_vec(&claims_b64, None)?)?;
+        #[cfg(feature = "chrono")]
+        claims.validate_with_duration(now, &options)?;
+        #[cfg(feature = "clock")]
         claims.validate(&options)?;
         Ok(claims)
     }
@@ -190,6 +195,7 @@ impl Token {
     }
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn should_verify_token() {
     use crate::prelude::*;
@@ -214,6 +220,7 @@ fn should_verify_token() {
         .unwrap();
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn multiple_audiences() {
     use std::collections::HashSet;
@@ -237,6 +244,7 @@ fn multiple_audiences() {
         .unwrap();
 }
 
+#[cfg(feature = "clock")]
 #[test]
 fn explicitly_empty_audiences() {
     use std::collections::HashSet;

@@ -178,6 +178,7 @@ pub trait RSAPublicKeyLike {
     fn hash(message: &[u8]) -> Vec<u8>;
     fn padding_scheme(&self) -> rsa::PaddingScheme;
 
+    #[cfg(feature = "clock")]
     fn verify_token<CustomClaims: Serialize + DeserializeOwned>(
         &self,
         token: &str,
@@ -195,6 +196,30 @@ pub trait RSAPublicKeyLike {
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
+        )
+    }
+
+    #[cfg(feature = "chrono")]
+    fn verify_token_with_timestamp<CustomClaims: Serialize + DeserializeOwned>(
+        &self,
+        token: &str,
+        options: Option<VerificationOptions>,
+        now: chrono::NaiveDateTime,
+    ) -> Result<JWTClaims<CustomClaims>, Error> {
+
+        Token::verify(
+            Self::jwt_alg_name(),
+            token,
+            options,
+            |authenticated, signature| {
+                let digest = Self::hash(authenticated.as_bytes());
+                self.public_key()
+                    .as_ref()
+                    .verify(self.padding_scheme(), &digest, signature)
+                    .map_err(|_| JWTError::InvalidSignature)?;
+                Ok(())
+            },
+            now,
         )
     }
 

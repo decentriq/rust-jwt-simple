@@ -157,6 +157,7 @@ pub trait EdDSAPublicKeyLike {
     fn key_id(&self) -> &Option<String>;
     fn set_key_id(&mut self, key_id: String);
 
+    #[cfg(feature = "clock")]
     fn verify_token<CustomClaims: Serialize + DeserializeOwned>(
         &self,
         token: &str,
@@ -174,6 +175,29 @@ pub trait EdDSAPublicKeyLike {
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
+        )
+    }
+
+    #[cfg(feature = "chorno")]
+    fn verify_token_with_timestamp<CustomClaims: Serialize + DeserializeOwned>(
+        &self,
+        token: &str,
+        options: Option<VerificationOptions>,
+        now: chrono::NaiveDateTime,
+    ) -> Result<JWTClaims<CustomClaims>, Error> {
+        Token::verify(
+            Self::jwt_alg_name(),
+            token,
+            options,
+            |authenticated, signature| {
+                let ed25519_signature = ed25519_compact::Signature::from_slice(signature)?;
+                self.public_key()
+                    .as_ref()
+                    .verify(authenticated, &ed25519_signature)
+                    .map_err(|_| JWTError::InvalidSignature)?;
+                Ok(())
+            },
+            now,
         )
     }
 
