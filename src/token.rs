@@ -1,9 +1,10 @@
-use anyhow::Error;
-use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
-use serde::Serialize;
+use anyhow::{ensure, Error};
+use ct_codecs::{Base64UrlSafeNoPadding, Decoder, Encoder};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::claims::JWTClaims;
+use crate::error::JWTError;
 use crate::jwt_header::JWTHeader;
 pub const MAX_HEADER_LENGTH: usize = 8192;
 
@@ -116,5 +117,20 @@ impl Token {
             authentication_tag_or_signature,
         )?);
         Ok(token)
+    }
+
+    /// Decode token information that can be usedful prior to signature/tag
+    /// verification
+    pub fn decode_metadata(token: &str) -> Result<TokenMetadata, Error> {
+        let mut parts = token.split('.');
+        let jwt_header_b64 = parts.next().ok_or(JWTError::CompactEncodingError)?;
+        ensure!(
+            jwt_header_b64.len() <= MAX_HEADER_LENGTH,
+            JWTError::HeaderTooLarge
+        );
+        let jwt_header: JWTHeader = serde_json::from_slice(
+            &Base64UrlSafeNoPadding::decode_to_vec(jwt_header_b64, None)?,
+        )?;
+        Ok(TokenMetadata { jwt_header })
     }
 }
